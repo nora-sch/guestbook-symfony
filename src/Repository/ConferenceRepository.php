@@ -45,4 +45,5 @@ class ConferenceRepository extends ServiceEntityRepository
 //            ->getOneOrNullResult()
 //        ;
 //    }
+
 }
