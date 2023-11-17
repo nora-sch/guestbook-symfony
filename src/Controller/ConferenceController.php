@@ -7,6 +7,7 @@ use App\Entity\Conference;
 use App\Form\CommentType;
 use App\Repository\CommentRepository;
 use App\Repository\ConferenceRepository;
+use App\SpamChecker;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -50,7 +51,7 @@ class ConferenceController extends AbstractController
     #[Route('/conference/{slug}', name: 'conference')]
     // public function show(Environment $twig, Conference $conference, CommentRepository $commentRepository)
     // public function show(Request $request, Environment $twig, Conference $conference, CommentRepository $commentRepository): Response
-    public function show(Request $request, Conference $conference, CommentRepository $commentRepository, ConferenceRepository $conferenceRepository, #[Autowire('%photo_dir%')] string $photoDir): Response
+    public function show(Request $request, Conference $conference, CommentRepository $commentRepository, ConferenceRepository $conferenceRepository, SpamChecker $spamChecker, #[Autowire('%photo_dir%')] string $photoDir): Response
     {
         $comment = new Comment();
         $form = $this->createForm(CommentType::class, $comment);
@@ -63,6 +64,18 @@ class ConferenceController extends AbstractController
                 $comment->setPhotoFilename($filename);
             }
             $this->entityManager->persist($comment);
+
+            $context = [
+                'user_ip' => $request->getClientIp(),
+                'user_agent' => $request->headers->get('user-agent'),
+                'referrer' => $request->headers->get('referer'),
+                'permalink' => $request->getUri(),
+            ];
+            // dump($spamChecker->getSpamScore($comment, $context));
+            if (2 === $spamChecker->getSpamScore($comment, $context)) {
+                throw new \RuntimeException('Blatant spam, go away!');
+            }
+
             $this->entityManager->flush();
             return $this->redirectToRoute('conference', ['slug' => $conference->getSlug()]);
         }
