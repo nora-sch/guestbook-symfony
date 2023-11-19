@@ -125,6 +125,7 @@ class Conference
 
         return $this;
     }
+    
     public function computeSlug(SluggerInterface $slugger)
     {
         if (!$this->slug || '-' === $this->slug) {
